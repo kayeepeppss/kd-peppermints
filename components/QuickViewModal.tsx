@@ -16,14 +16,16 @@ export default function QuickViewModal({
   onQuickView?: (p: Product) => void
 }) {
   const [qty, setQty] = useState(1)
+  const [buyMode, setBuyMode] = useState<'kit' | 'piece'>('kit')
   const { addToCart } = useCart()
 
+  const activePrice = buyMode === 'kit' ? product.price : (product.piece_price || Math.round(product.price / 10))
+
   const handleAdd = () => {
-    addToCart(product, qty)
+    addToCart({ ...product, price: activePrice, name: `${product.name} (${buyMode === 'kit' ? 'Kit' : 'Piece'})` }, qty)
     onClose()
   }
 
-  // Find 3 related products from the same category
   const relatedProducts = allProducts
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 3)
@@ -79,9 +81,25 @@ export default function QuickViewModal({
         </div>
 
         <div className="w-full md:w-1/2 p-6 flex flex-col justify-center bg-peppermint-base/30">
+          
+          <div className="flex bg-white border border-peppermint-wash rounded-full p-1 mb-6 w-fit">
+            <button 
+              onClick={() => setBuyMode('kit')}
+              className={`px-6 py-2 text-sm font-bold rounded-full transition-all ${buyMode === 'kit' ? 'bg-charcoal text-white shadow-md' : 'text-neutralgrey hover:text-charcoal'}`}
+            >
+              Buy Kit
+            </button>
+            <button 
+              onClick={() => setBuyMode('piece')}
+              className={`px-6 py-2 text-sm font-bold rounded-full transition-all ${buyMode === 'piece' ? 'bg-charcoal text-white shadow-md' : 'text-neutralgrey hover:text-charcoal'}`}
+            >
+              Buy Piece
+            </button>
+          </div>
+
           <div className="mb-6">
-            <p className="text-sm text-neutralgrey font-medium mb-1">Price</p>
-            <p className="text-4xl font-heading text-charcoal">₱{product.price}</p>
+            <p className="text-sm text-neutralgrey font-medium mb-1">Price per {buyMode === 'kit' ? 'Kit' : 'Piece'}</p>
+            <p className="text-4xl font-heading text-charcoal">₱{activePrice}</p>
           </div>
 
           <div className="mb-6">
@@ -95,7 +113,7 @@ export default function QuickViewModal({
 
           <div className="bg-charcoal text-white rounded-soft p-4 mb-6 flex justify-between items-center">
             <span className="text-sm text-white/70">Total</span>
-            <span className="text-xl font-bold">₱{product.price * qty}</span>
+            <span className="text-xl font-bold">₱{activePrice * qty}</span>
           </div>
 
           <button 
