@@ -28,7 +28,7 @@ export default function CheckoutPage() {
     paymentMethod: 'GCash',
   })
 
-  // 🔥 LOAD SAVED DETAILS
+  // Load saved details on mount
   useEffect(() => {
     const saved = localStorage.getItem('kd_customer_details')
     if (saved) {
@@ -71,6 +71,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true)
 
     try {
+      // 1. Upload Receipt
       const fileExt = proofFile.name.split('.').pop()
       const fileName = `${Date.now()}.${fileExt}`
       
@@ -79,8 +80,10 @@ export default function CheckoutPage() {
 
       const { data: { publicUrl } } = supabase.storage.from('Proof of Payment').getPublicUrl(fileName)
 
+      // 2. Combine Address
       const fullAddress = `${formData.street}, Brgy. ${formData.barangay}, ${formData.city}, ${formData.province}, ${formData.zip}`
 
+      // 3. Save to Database
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -103,6 +106,7 @@ export default function CheckoutPage() {
 
       if (orderError) throw orderError
 
+      // 4. Generate WhatsApp Message
       const itemsText = cart.map(item => `▪️ ${item.product.name} (${item.product.variant})\n   Qty: ${item.quantity} x ₱${item.product.price} = *₱${item.product.price * item.quantity}*`).join('\n\n')
 
       const message = `*🌿 KD-PEPPERMINTS - NEW ORDER*
@@ -132,14 +136,20 @@ Shipping Fee: ₱${shippingFee}
 
       const encodedMessage = encodeURIComponent(message)
       
-      // 🔥 SAVE DETAILS
+      // 🔥 MOBILE DETECTION & WHATSAPP FIX
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const whatsappUrl = isMobile 
+        ? `whatsapp://send?phone=639761710264&text=${encodedMessage}`
+        : `https://wa.me/639761710264?text=${encodedMessage}`;
+
+      // Save details for next time
       const saveDetails = (document.getElementById('saveDetails') as HTMLInputElement)?.checked
       if (saveDetails) {
         localStorage.setItem('kd_customer_details', JSON.stringify(formData))
       }
 
       clearCart()
-      window.location.href = `https://api.whatsapp.com/send?phone=639761710264&text=${encodedMessage}`
+      window.location.href = whatsappUrl
       
     } catch (error: any) {
       alert('Error: ' + error.message)
@@ -342,7 +352,6 @@ Shipping Fee: ₱${shippingFee}
                   <input required type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-neutralgrey file:mr-4 file:py-2.5 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-peppermint-wash file:text-peppermint-deep hover:file:bg-peppermint-primary hover:file:text-white transition-all cursor-pointer" />
                 </div>
 
-                {/* 🔥 SAVE DETAILS CHECKBOX */}
                 <label className="flex items-center gap-3 cursor-pointer p-3 bg-peppermint-base rounded-soft border border-peppermint-wash mt-6">
                   <input type="checkbox" id="saveDetails" className="w-4 h-4 accent-peppermint-primary" defaultChecked />
                   <span className="text-sm font-medium text-charcoal">Save my details for faster checkout next time</span>
